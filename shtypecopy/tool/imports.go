@@ -8,14 +8,14 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"os"
 	"regexp"
 	"strconv"
 
+	"github.com/go-git/go-billy/v5"
 	"github.com/pkg/errors"
 )
 
-func changeImports(match, newPackage string, editFiles []string) error {
+func changeImports(fs billy.Filesystem, match, newPackage string, editFiles []string) error {
 	var (
 		err           error
 		oldPackagePat *regexp.Regexp
@@ -35,6 +35,7 @@ func changeImports(match, newPackage string, editFiles []string) error {
 		return errors.Wrap(err, "invalid match pattern")
 	}
 	ctxt := &context{
+		fs:            fs,
 		newPackage:    newPackage,
 		oldPackagePat: oldPackagePat,
 	}
@@ -48,9 +49,9 @@ func changeImports(match, newPackage string, editFiles []string) error {
 }
 
 type context struct {
+	fs            billy.Filesystem
 	newPackage    string
 	oldPackagePat *regexp.Regexp
-	checked       map[string]bool
 }
 
 var printConfig = printer.Config{
@@ -92,7 +93,7 @@ func (ctxt *context) changeVersion(path string) bool {
 	if !changed {
 		return changed
 	}
-	out, err := os.Create(path)
+	out, err := ctxt.fs.Create(path)
 	if err != nil {
 		logError(err, "cannot create file")
 	}

@@ -10,16 +10,6 @@ This is useful e.g. for RLP encoding the Shutter transaction types in
 rolling shutter.
 
 
-## Updating the types
-
-Currently updating the types itself from original go-ethereum 
-is a manual process.
-
-The upstream commit hash of go-ethereum the types are 
-currently modified from should be put in the 
-`txtypes/types/GOETHEREUM_BASE_COMMIT` file.
-
-
 ## Source code syncing
 
 With the help of the purpose built `shtypecopy` tool,
@@ -27,12 +17,12 @@ it is possible to copy a subset of modified files
 to the target directory, and eventually replace the 
 original packes import paths.
 
-E.g. for cannon minigeth:
+
 ```
->> git clone github.com/shutter-network/cannon
 >> git clone github.com/shutter-network/txtypes
 
->> echo "replace: transaction_extension.go
+>> echo "source-url: github.com/shutter-network/go-ethereum@shutter-types
+       replace: transaction_extension.go
        replace: transaction_marshalling.go
        replace: access_list_tx.go
        replace: batch_context_tx.go
@@ -45,10 +35,10 @@ E.g. for cannon minigeth:
        replace: shutter_tx.go
        replace: transaction.go
        replace: transaction_signing.go
-       replace: block.go" >> rules.txt
+       replace: block.go" >> rules.shtype
 
 >> go build txypes/shtypecopy/ -o shtypecopy
->> ./shtypecopy --in txtypes/types/ --out cannon/minigeth/core/types/ --rules rules.txt
+>> ./shtypecopy --in core/types/ --out txtypes/types/ --rules rules.shtype
 
 ```
 

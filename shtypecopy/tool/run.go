@@ -2,28 +2,64 @@ package tool
 
 import (
 	"fmt"
-	"path/filepath"
 
+	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/pkg/errors"
 )
 
 func Run(inDir, outDir, ruleFile string) error {
-	rules, err := readRules(ruleFile)
+	outFs := osfs.New("./")
+	outDir = outFs.Join(outDir)
+	err := ExistsOrError(outFs, outDir)
 	if err != nil {
 		return err
 	}
-	ExistsOrError(outDir)
+
+	rules, err := readRules(outFs, ruleFile)
+	if err != nil {
+		return err
+	}
 
 	outFiles := make([]string, 0)
+	if rules.source == "" {
+		return errors.New("'source' directive is mandatory")
+	}
+
+	// Read to memory from git
+	inFs := memfs.New()
+	mainBranch := "master"
+	gitInfo, err := GitCloneToFS(
+		inFs,
+		rules.source,
+		mainBranch,
+	)
+	logf("Common ancestor commit with branch '%s': %s\n", mainBranch, gitInfo.MainBranchOff.Hash)
+	file, err := outFs.Create("./GOETHEREUM_BRANCH_OFF")
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+	file.Write([]byte(fmt.Sprintf("%s\n", gitInfo.MainBranchOff.Hash)))
+	file, err = outFs.Create("./GOETHEREUM_SOURCE")
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+	file.Write([]byte(fmt.Sprintf("%s\n", rules.source)))
+
+	if err != nil {
+		return err
+	}
 	for k, v := range rules.replaceMap {
-		in := filepath.Join(inDir, k)
-		out := filepath.Join(outDir, v)
-		err = ExistsOrError(out)
+		in := inFs.Join(inDir, k)
+		out := outFs.Join(outDir, v)
+		err = ExistsOrError(outFs, out)
 		if err != nil {
 			logError(err, "Replace failed")
 			continue
 		}
-		err := Copy(in, out)
+		err := Copy(inFs, outFs, in, out)
 		if err != nil {
 			logError(err, "Replace failed")
 			continue
@@ -34,9 +70,9 @@ func Run(inDir, outDir, ruleFile string) error {
 		}
 	}
 	for k, v := range rules.newMap {
-		in := filepath.Join(inDir, k)
-		out := filepath.Join(outDir, v)
-		err := Copy(in, out)
+		in := inFs.Join(inDir, k)
+		out := outFs.Join(outDir, v)
+		err := Copy(inFs, outFs, in, out)
 		if err != nil {
 			logError(err, "New failed")
 			continue
@@ -46,7 +82,7 @@ func Run(inDir, outDir, ruleFile string) error {
 		}
 	}
 	for k, v := range rules.importReplaceMap {
-		err := changeImports(k, v, outFiles)
+		err := changeImports(outFs, k, v, outFiles)
 		if err != nil {
 			logError(err, "Replace failed")
 			continue
