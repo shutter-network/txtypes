@@ -3,7 +3,7 @@ package types
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/shutter-network/go-ethereum/common"
 )
 
 type ShutterTx struct {
@@ -33,6 +33,7 @@ func (tx *ShutterTx) copy() TxData {
 		GasTipCap:        new(big.Int),
 		GasFeeCap:        new(big.Int),
 		EncryptedPayload: []byte{},
+		BatchIndex:       []byte{},
 		V:                new(big.Int),
 		R:                new(big.Int),
 		S:                new(big.Int),
@@ -81,7 +82,7 @@ func (tx *ShutterTx) nonce() uint64            { return tx.Nonce }
 func (tx *ShutterTx) to() *common.Address      { return nil }
 func (tx *ShutterTx) encryptedPayload() []byte { return tx.EncryptedPayload }
 func (tx *ShutterTx) decryptionKey() []byte    { return nil }
-func (tx *ShutterTx) batchIndex() []byte       { return nil }
+func (tx *ShutterTx) batchIndex() []byte       { return tx.BatchIndex }
 
 func (tx *ShutterTx) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S

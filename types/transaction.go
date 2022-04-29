@@ -25,10 +25,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/shutter-network/go-ethereum/common"
+	"github.com/shutter-network/go-ethereum/common/math"
+	"github.com/shutter-network/go-ethereum/crypto"
+	"github.com/shutter-network/go-ethereum/rlp"
 )
 
 var (
@@ -37,7 +37,7 @@ var (
 	ErrInvalidTxType        = errors.New("transaction type not valid in this context")
 	ErrTxTypeNotSupported   = errors.New("transaction type not supported")
 	ErrGasFeeCapTooLow      = errors.New("fee cap less than base fee")
-	errShortTypedTx         = errors.New("typed transaction too short")
+	errEmptyTypedTx         = errors.New("empty typed transaction bytes")
 )
 
 // Transaction types.
@@ -138,7 +138,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 			tx.setDecoded(&inner, int(rlp.ListSize(size)))
 		}
 		return err
-	default:
+	case kind == rlp.String:
 		// It's an EIP-2718 typed TX envelope.
 		var b []byte
 		if b, err = s.Bytes(); err != nil {
@@ -149,6 +149,8 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 			tx.setDecoded(inner, len(b))
 		}
 		return err
+	default:
+		return rlp.ErrExpectedList
 	}
 }
 
@@ -176,8 +178,8 @@ func (tx *Transaction) UnmarshalBinary(b []byte) error {
 
 // decodeTyped decodes a typed transaction from the canonical format.
 func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
-	if len(b) <= 1 {
-		return nil, errShortTypedTx
+	if len(b) == 0 {
+		return nil, errEmptyTypedTx
 	}
 	switch b[0] {
 	case AccessListTxType:
@@ -294,8 +296,23 @@ func (tx *Transaction) Nonce() uint64 { return tx.inner.nonce() }
 // To returns the recipient address of the transaction.
 // For contract-creation transactions, To returns nil.
 func (tx *Transaction) To() *common.Address {
-	return copyAddressPtr(tx.inner.to())
+	// Copy the pointed-to address.
+	ito := tx.inner.to()
+	if ito == nil {
+		return nil
+	}
+	cpy := *ito
+	return &cpy
 }
+
+// EncryptedPayload returns the encrypted payload of a Shutter transaction.
+func (tx *Transaction) EncryptedPayload() []byte { return tx.inner.encryptedPayload() }
+
+// DecryptionKey returns the decryption key of a decryption key transaction.
+func (tx *Transaction) DecryptionKey() []byte { return tx.inner.decryptionKey() }
+
+// BatchIndex returns the batch index (a.k.a sequence number) of a Shutter transaction.
+func (tx *Transaction) BatchIndex() []byte { return tx.inner.batchIndex() }
 
 // Cost returns gas * gasPrice + value.
 func (tx *Transaction) Cost() *big.Int {
@@ -636,12 +653,3 @@ func (m Message) Nonce() uint64          { return m.nonce }
 func (m Message) Data() []byte           { return m.data }
 func (m Message) AccessList() AccessList { return m.accessList }
 func (m Message) IsFake() bool           { return m.isFake }
-
-// copyAddressPtr copies an address.
-func copyAddressPtr(a *common.Address) *common.Address {
-	if a == nil {
-		return nil
-	}
-	cpy := *a
-	return &cpy
-}
