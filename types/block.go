@@ -26,9 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/shutter-network/go-ethereum/common"
-	"github.com/shutter-network/go-ethereum/common/hexutil"
-	"github.com/shutter-network/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (

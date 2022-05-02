@@ -1,5 +1,4 @@
 source: github.com/shutter-network/go-ethereum@shutter-types
-import-replace: github.com/ethereum/go-ethereum => github.com/shutter-network/go-ethereum
 replace: transaction_extension.go
 replace: transaction_marshalling.go
 replace: access_list_tx.go
