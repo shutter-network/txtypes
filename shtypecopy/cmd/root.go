@@ -25,12 +25,12 @@ This is a simple helper tool to distribute type-redefinitions
 to various forks that can't import the code, but need to
 have the source-code located in their packages.
 
-Currently this is a simple copy tool that has a 
-copies files from the source directory to the target directory 
+Currently this is a very simple tool that
+copies files from the source directory (or repository) to the target directory 
 based on rules defined in a rule file.
 
 Additionally, the import paths in the target files can be replaced
-based on a simple pattern matching algorithm.
+based on a go-syntax aware pattern matching algorithm.
 
 Syntax of the rule file:
 =========================
@@ -60,6 +60,18 @@ Replacing import statements:
 --------------------------------------------------------
 
 'import-replace: github.com/foo/repo => github.com/bar/repo'
+
+
+Sourcing from a git repository:
+--------------------------------------------------------
+
+'source: github.com/<user>/<repo>@<branch>'
+
+This will set the input directory relative to the specified
+repository contentent and will copy from there.
+It will also put the hash of the last common ancester-commit of <branch>
+and the "main" branch in a file "GOETHEREUM_BRANCH_OFF" and the 
+input repo in a file "GOETHEREUM_SOURCE"
 `
 
 var (

@@ -21,7 +21,7 @@ original packes import paths.
 ```
 >> git clone github.com/shutter-network/txtypes
 
->> echo "source-url: github.com/shutter-network/go-ethereum@shutter-types
+>> echo "source: github.com/shutter-network/go-ethereum@shutter-types
        replace: transaction_extension.go
        replace: transaction_marshalling.go
        replace: access_list_tx.go
