@@ -41,12 +41,20 @@ func Run(inDir, outDir, ruleFile string) error {
 		return err
 	}
 	file.Write([]byte(fmt.Sprintf("%s\n", gitInfo.MainBranchOff.Hash)))
+
 	file, err = outFs.Create("./GOETHEREUM_SOURCE")
 	defer file.Close()
 	if err != nil {
 		return err
 	}
 	file.Write([]byte(fmt.Sprintf("%s\n", rules.source)))
+
+	file, err = outFs.Create("./GOETHEREUM_COMMIT")
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+	file.Write([]byte(fmt.Sprintf("%s\n", gitInfo.Head.Hash)))
 
 	if err != nil {
 		return err
