@@ -45,8 +45,8 @@ const (
 	LegacyTxType = iota
 	AccessListTxType
 	DynamicFeeTxType
-	ShutterTxType      = 0x50
-	BatchContextTxType = 0x5a
+	ShutterTxType = 0x50
+	BatchTxType   = 0x5a
 )
 
 // Transaction is an Ethereum transaction.
@@ -194,8 +194,8 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		var inner ShutterTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
-	case BatchContextTxType:
-		var inner BatchContextTx
+	case BatchTxType:
+		var inner BatchTx
 		err := rlp.DecodeBytes(b[1:], &inner)
 		return &inner, err
 	default:
@@ -321,12 +321,8 @@ func (tx *Transaction) L1BlockNumber() *big.Int { return tx.inner.l1BlockNumber(
 // Timestamp returns the timestamp ()
 func (tx *Transaction) Timestamp() *big.Int { return tx.inner.timestamp() }
 
-// ShutterTXs returns the list of RLP-byte serialised ShutterTXs included in the batch
-func (tx *Transaction) ShutterTXs() [][]byte { return tx.inner.shutterTXs() }
-
-// PlainTextTXs returns the list of RLP-byte serialised unencrypted Ethereum transactions
-//included in the batch
-func (tx *Transaction) PlainTextTXs() [][]byte { return tx.inner.plainTextTXs() }
+// Transactions returns the list of RLP-byte serialised ShutterTxs and plaintext txs included in the batch
+func (tx *Transaction) Transactions() [][]byte { return tx.inner.transactions() }
 
 // Cost returns gas * gasPrice + value.
 func (tx *Transaction) Cost() *big.Int {

@@ -2,7 +2,7 @@ source: github.com/shutter-network/go-ethereum@shutter-types
 replace: transaction_extension.go
 replace: transaction_marshalling.go
 replace: access_list_tx.go
-replace: batch_context_tx.go
+replace: batch_tx.go
 replace: bloom9.go
 replace: dynamic_fee_tx.go
 replace: hashing.go
