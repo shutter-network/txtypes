@@ -1,4 +1,7 @@
 source: github.com/shutter-network/go-ethereum@shutter-types
+replace: gen_log_json.go
+replace: gen_receipt_json.go
+replace: gen_header_json.go
 replace: transaction_extension.go
 replace: transaction_marshalling.go
 replace: access_list_tx.go
