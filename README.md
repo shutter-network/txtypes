@@ -18,9 +18,19 @@ original packes import paths.
 
 Workflow how to update go-ethereum type definitions accross code-bases:
 
-1) Merge the type changes in https://github.com/shutter-network/go-ethereum/ 
+#### 1 - Make the changes to the types in the geth fork
 
-2) Sync code in the `cannon` repo
+in https://github.com/shutter-network/go-ethereum/ 
+```
+cd go-ethereum/core/types
+git checkout shutter-types
+echo "// changes" >> transaction.go
+git add . -u
+git commit -m "Update type definition"
+```
+And push and merge upstream.
+
+#### 2 - Sync code in the `cannon` repo
 
 ```
 cd cannon/minigeth/core/types
@@ -30,7 +40,7 @@ git commit -m "Sync types with github.com/shutter-network/go-ethereum"
 ```
 And push and merge upstream.
 
-3) Sync code in the `txtypes` repo
+#### 3 - Sync code in the `txtypes` repo
 ```
 cd txtypes/types
 ./shtypecopy --in core/types  --out . --rules rules.shtypecopy
@@ -38,17 +48,18 @@ git add . -u
 git commit -m "Sync types with github.com/shutter-network/go-ethereum"
 ```
 
-4) Push a semver tag
+#### 4 - Push a new semver tag
 ```
 git tag v0.0.42
 git push --tags
 ```
+And push and merge upstream.
 
-5) Update txypes version in `rolling-shutter` repo
+#### 5 - Update txypes version in `rolling-shutter` repo
 You have to wait at least 1 minute after pushing the new version in order to not poison the `proxy.golang.org` cache:
 
-From https://proxy.golang.org/
-> The new version should be available within one minute. Note that if someone requested the version before the tag was pushed, it may take up to 30 minutes for the mirror's cache to expire and fresh data about the version to become available.
+> From https://proxy.golang.org/ - 
+The new version should be available within one minute. Note that if someone requested the version before the tag was pushed, it may take up to 30 minutes for the mirror's cache to expire and fresh data about the version to become available.
 
 ```
 cd rolling-shutter/rolling-shutter
