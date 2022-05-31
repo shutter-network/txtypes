@@ -9,40 +9,50 @@ since all necessary base-types are included here.
 This is useful e.g. for RLP encoding the Shutter transaction types in
 rolling shutter.
 
-
-## Source code syncing
+## Updating shutter-network/go-ethereum type definitions
 
 With the help of the purpose built `shtypecopy` tool,
 it is possible to copy a subset of modified files 
 to the target directory, and eventually replace the 
 original packes import paths.
 
+Workflow how to update go-ethereum type definitions accross code-bases:
+
+1) Merge the type changes in https://github.com/shutter-network/go-ethereum/ 
+
+2) Sync code in the `cannon` repo
 
 ```
->> git clone github.com/shutter-network/txtypes
+cd cannon/minigeth/core/types
+./shtypecopy --in core/types --out . --rules rules.shtypecopy
+git add . -u
+git commit -m "Sync types with github.com/shutter-network/go-ethereum"
+```
+And push and merge upstream.
 
->> echo "source: github.com/shutter-network/go-ethereum@shutter-types
-       replace: transaction_extension.go
-       replace: transaction_marshalling.go
-       replace: access_list_tx.go
-       replace: batch_context_tx.go
-       replace: bloom9.go
-       replace: dynamic_fee_tx.go
-       replace: hashing.go
-       replace: legacy_tx.go
-       replace: log.go
-       replace: receipt.go
-       replace: shutter_tx.go
-       replace: transaction.go
-       replace: transaction_signing.go
-       replace: block.go" >> rules.shtype
-
->> go build txypes/shtypecopy/ -o shtypecopy
->> ./shtypecopy --in core/types/ --out txtypes/types/ --rules rules.shtype
-
+3) Sync code in the `txtypes` repo
+```
+cd txtypes/types
+./shtypecopy --in core/types  --out . --rules rules.shtypecopy
+git add . -u
+git commit -m "Sync types with github.com/shutter-network/go-ethereum"
 ```
 
-The rule files could be checked out in the target repos, and additional scripts
-that coordinate the `shtypecopy` tool could be constructed to further optimise the
-source code syncing experience.
+4) Push a semver tag
+```
+git tag v0.0.42
+git push --tags
+```
 
+5) Update txypes version in `rolling-shutter` repo
+You have to wait at least 1 minute after pushing the new version in order to not poison the `proxy.golang.org` cache:
+
+From https://proxy.golang.org/
+> The new version should be available within one minute. Note that if someone requested the version before the tag was pushed, it may take up to 30 minutes for the mirror's cache to expire and fresh data about the version to become available.
+
+```
+cd rolling-shutter/rolling-shutter
+go get github.com/shutter-network/txtypes@v0.0.42
+git add . -u
+git commit -m "Update txtypes version to v0.0.42"
+```
