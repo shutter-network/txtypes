@@ -46,6 +46,16 @@ type txJSON struct {
 	ChainID    *hexutil.Big `json:"chainId,omitempty"`
 	AccessList *AccessList  `json:"accessList,omitempty"`
 
+	// BatchTx transaction fields:
+	Transactions  []hexutil.Bytes `json:"transactions,omitempty"`
+	DecryptionKey *hexutil.Bytes  `json:"decryptionKey,omitempty"`
+	L1BlockNumber *hexutil.Uint64 `json:"l1BlockNumber,omitempty"`
+	Timestamp     *hexutil.Big    `json:"timestamp,omitempty"`
+	BatchIndex    *hexutil.Uint64 `json:"batchIndex,omitempty"`
+
+	// ShutterTx transaction fields:
+	EncryptedPayload *hexutil.Bytes `json:"encryptedPayload,omitempty"`
+
 	// Only used for encoding:
 	Hash common.Hash `json:"hash"`
 }
@@ -90,6 +100,35 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap)
 		enc.Value = (*hexutil.Big)(tx.Value)
 		enc.Data = (*hexutil.Bytes)(&tx.Data)
+		enc.To = t.To()
+		enc.V = (*hexutil.Big)(tx.V)
+		enc.R = (*hexutil.Big)(tx.R)
+		enc.S = (*hexutil.Big)(tx.S)
+	case *ShutterTx:
+		enc.ChainID = (*hexutil.Big)(tx.ChainID)
+		enc.Nonce = (*hexutil.Uint64)(&tx.Nonce)
+		enc.Gas = (*hexutil.Uint64)(&tx.Gas)
+		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap)
+		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap)
+		enc.EncryptedPayload = (*hexutil.Bytes)(&tx.EncryptedPayload)
+		enc.L1BlockNumber = (*hexutil.Uint64)(&tx.L1BlockNumber)
+		enc.BatchIndex = (*hexutil.Uint64)(&tx.BatchIndex)
+		enc.To = t.To()
+		enc.V = (*hexutil.Big)(tx.V)
+		enc.R = (*hexutil.Big)(tx.R)
+		enc.S = (*hexutil.Big)(tx.S)
+	case *BatchTx:
+		enc.ChainID = (*hexutil.Big)(tx.ChainID)
+		if tx.Transactions != nil {
+			enc.Transactions = make([]hexutil.Bytes, len(tx.Transactions))
+			for k, v := range tx.Transactions {
+				enc.Transactions[k] = hexutil.Bytes(v)
+			}
+		}
+		enc.Timestamp = (*hexutil.Big)(tx.Timestamp)
+		enc.DecryptionKey = (*hexutil.Bytes)(&tx.DecryptionKey)
+		enc.L1BlockNumber = (*hexutil.Uint64)(&tx.L1BlockNumber)
+		enc.BatchIndex = (*hexutil.Uint64)(&tx.BatchIndex)
 		enc.To = t.To()
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
