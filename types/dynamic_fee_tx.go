@@ -40,7 +40,7 @@ type DynamicFeeTx struct {
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *DynamicFeeTx) copy() TxData {
+func (tx *DynamicFeeTx) copy() TxInner {
 	cpy := &DynamicFeeTx{
 		Nonce: tx.Nonce,
 		To:    tx.To, // TODO: copy pointed-to address

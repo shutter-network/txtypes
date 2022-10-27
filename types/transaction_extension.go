@@ -2,7 +2,7 @@ package types
 
 import "math/big"
 
-type TxDataExtension interface {
+type TxInnerExtension interface {
 	encryptedPayload() []byte
 	decryptionKey() []byte
 	batchIndex() uint64
