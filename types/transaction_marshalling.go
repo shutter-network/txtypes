@@ -18,52 +18,93 @@ package types
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 )
 
-// txJSON is the JSON representation of transactions.
-type txJSON struct {
+type TransactionData struct {
 	Type hexutil.Uint64 `json:"type"`
 
-	// Common transaction fields:
-	Nonce                *hexutil.Uint64 `json:"nonce"`
-	GasPrice             *hexutil.Big    `json:"gasPrice"`
-	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
-	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
-	Gas                  *hexutil.Uint64 `json:"gas"`
-	Value                *hexutil.Big    `json:"value"`
-	Data                 *hexutil.Bytes  `json:"input"`
-	V                    *hexutil.Big    `json:"v"`
-	R                    *hexutil.Big    `json:"r"`
-	S                    *hexutil.Big    `json:"s"`
-	To                   *common.Address `json:"to"`
+	// LegacyTx
+	From     *common.Address `json:"from"`
+	Gas      *hexutil.Uint64 `json:"gas"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+	Hash     common.Hash     `json:"hash"`
+	Input    *hexutil.Bytes  `json:"input"`
+	Nonce    *hexutil.Uint64 `json:"nonce"`
+	To       *common.Address `json:"to"`
+	Value    *hexutil.Big    `json:"value"`
 
-	// Access list transaction fields:
-	ChainID    *hexutil.Big `json:"chainId,omitempty"`
+	// AccessListTx
 	AccessList *AccessList  `json:"accessList,omitempty"`
+	ChainID    *hexutil.Big `json:"chainId,omitempty"`
 
-	// BatchTx transaction fields:
-	Transactions  []hexutil.Bytes `json:"transactions,omitempty"`
-	DecryptionKey *hexutil.Bytes  `json:"decryptionKey,omitempty"`
-	L1BlockNumber *hexutil.Uint64 `json:"l1BlockNumber,omitempty"`
-	Timestamp     *hexutil.Big    `json:"timestamp,omitempty"`
-	BatchIndex    *hexutil.Uint64 `json:"batchIndex,omitempty"`
+	// DynamicFeeTx
+	MaxFeePerGas         *hexutil.Big `json:"maxFeePerGas,omitempty"`
+	MaxPriorityFeePerGas *hexutil.Big `json:"maxPriorityFeePerGas,omitempty"`
 
-	// ShutterTx transaction fields:
+	// ShutterTx
 	EncryptedPayload *hexutil.Bytes `json:"encryptedPayload,omitempty"`
 
-	// Only used for encoding:
-	Hash common.Hash `json:"hash"`
+	// BatchTx
+	DecryptionKey *hexutil.Bytes  `json:"decryptionKey,omitempty"`
+	Timestamp     *hexutil.Big    `json:"timestamp,omitempty"`
+	Transactions  []hexutil.Bytes `json:"transactions,omitempty"`
+
+	// ShutterTx and BatchTx
+	BatchIndex    *hexutil.Uint64 `json:"batchIndex,omitempty"`
+	L1BlockNumber *hexutil.Uint64 `json:"l1BlockNumber,omitempty"`
+
+	// Optional information for included transactions
+	BlockHash        *common.Hash    `json:"blockHash,omitempty"`
+	BlockNumber      *hexutil.Big    `json:"blockNumber,omitempty"`
+	TransactionIndex *hexutil.Uint64 `json:"transactionIndex,omitempty"`
+
+	V *hexutil.Big `json:"v"`
+	R *hexutil.Big `json:"r"`
+	S *hexutil.Big `json:"s"`
 }
 
-// MarshalJSON marshals as JSON with a hash.
+func (td *TransactionData) ValidateRequiredFields(names ...string) (bool, error) {
+	rv := reflect.ValueOf(td)
+	rv = rv.Elem()
+
+	inValidFieldNames := make([]string, 0)
+
+	for _, fieldName := range names {
+		f := rv.FieldByName(fieldName)
+		if (f == reflect.Value{}) {
+			// field was not found, programming error!
+			return false, errors.Errorf("field '%s' is not defined in type", fieldName)
+		}
+		if !f.IsValid() || f.IsNil() {
+			inValidFieldNames = append(inValidFieldNames, fieldName)
+		}
+	}
+	if len(inValidFieldNames) > 0 {
+		errStr := "required fields are nil: "
+		for _, n := range inValidFieldNames {
+			errStr = errStr + fmt.Sprintf(" %s,", n)
+		}
+		return false, errors.New(errStr)
+	}
+	return true, nil
+}
+
 func (t *Transaction) MarshalJSON() ([]byte, error) {
-	var enc txJSON
+	// MarshalJSON marshals as JSON with a hash.
+	enc := t.TransactionData()
+	return json.Marshal(enc)
+}
+
+func (t *Transaction) TransactionData() (enc *TransactionData) {
 	// These are set for all tx types.
+	enc = new(TransactionData)
 	enc.Hash = t.Hash()
 	enc.Type = hexutil.Uint64(t.Type())
 
@@ -74,7 +115,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Gas = (*hexutil.Uint64)(&tx.Gas)
 		enc.GasPrice = (*hexutil.Big)(tx.GasPrice)
 		enc.Value = (*hexutil.Big)(tx.Value)
-		enc.Data = (*hexutil.Bytes)(&tx.Data)
+		enc.Input = (*hexutil.Bytes)(&tx.Data)
 		enc.To = t.To()
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
@@ -86,7 +127,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Gas = (*hexutil.Uint64)(&tx.Gas)
 		enc.GasPrice = (*hexutil.Big)(tx.GasPrice)
 		enc.Value = (*hexutil.Big)(tx.Value)
-		enc.Data = (*hexutil.Bytes)(&tx.Data)
+		enc.Input = (*hexutil.Bytes)(&tx.Data)
 		enc.To = t.To()
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
@@ -99,7 +140,7 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap)
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap)
 		enc.Value = (*hexutil.Big)(tx.Value)
-		enc.Data = (*hexutil.Bytes)(&tx.Data)
+		enc.Input = (*hexutil.Bytes)(&tx.Data)
 		enc.To = t.To()
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
@@ -134,16 +175,19 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
 	}
-	return json.Marshal(&enc)
+	return enc
 }
 
 // UnmarshalJSON unmarshals from JSON.
 func (t *Transaction) UnmarshalJSON(input []byte) error {
-	var dec txJSON
+	var dec TransactionData
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
+	return t.FromTransactionData(&dec)
+}
 
+func (t *Transaction) FromTransactionData(dec *TransactionData) error {
 	// Decode / verify fields according to transaction type.
 	var inner TxInner
 	switch dec.Type {
@@ -169,10 +213,10 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'value' in transaction")
 		}
 		itx.Value = (*big.Int)(dec.Value)
-		if dec.Data == nil {
+		if dec.Input == nil {
 			return errors.New("missing required field 'input' in transaction")
 		}
-		itx.Data = *dec.Data
+		itx.Data = *dec.Input
 		if dec.V == nil {
 			return errors.New("missing required field 'v' in transaction")
 		}
@@ -222,10 +266,10 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'value' in transaction")
 		}
 		itx.Value = (*big.Int)(dec.Value)
-		if dec.Data == nil {
+		if dec.Input == nil {
 			return errors.New("missing required field 'input' in transaction")
 		}
-		itx.Data = *dec.Data
+		itx.Data = *dec.Input
 		if dec.V == nil {
 			return errors.New("missing required field 'v' in transaction")
 		}
@@ -279,10 +323,28 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'value' in transaction")
 		}
 		itx.Value = (*big.Int)(dec.Value)
-		if dec.Data == nil {
+		if dec.Input == nil {
 			return errors.New("missing required field 'input' in transaction")
 		}
-		itx.Data = *dec.Data
+		itx.Data = *dec.Input
+		if dec.V == nil {
+			return errors.New("missing required field 'v' in transaction")
+		}
+		itx.V = (*big.Int)(dec.V)
+		if dec.R == nil {
+			return errors.New("missing required field 'r' in transaction")
+		}
+		itx.R = (*big.Int)(dec.R)
+		if dec.S == nil {
+			return errors.New("missing required field 's' in transaction")
+		}
+		itx.S = (*big.Int)(dec.S)
+		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if withSignature {
+			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
+				return err
+			}
+		}
 		if dec.V == nil {
 			return errors.New("missing required field 'v' in transaction")
 		}
