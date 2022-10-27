@@ -21,7 +21,7 @@ type BatchTx struct {
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *BatchTx) copy() TxData {
+func (tx *BatchTx) copy() TxInner {
 	cpy := &BatchTx{
 		ChainID:       new(big.Int),
 		DecryptionKey: []byte{},

@@ -51,7 +51,7 @@ const (
 
 // Transaction is an Ethereum transaction.
 type Transaction struct {
-	inner TxData    // Consensus contents of a transaction
+	inner TxInner   // Consensus contents of a transaction
 	time  time.Time // Time first seen locally (spam avoidance)
 
 	// caches
@@ -61,18 +61,19 @@ type Transaction struct {
 }
 
 // NewTx creates a new transaction.
-func NewTx(inner TxData) *Transaction {
+func NewTx(inner TxInner) *Transaction {
 	tx := new(Transaction)
 	tx.setDecoded(inner.copy(), 0)
 	return tx
 }
 
-// TxData is the underlying data of a transaction.
+// TxInner is the underlying data of a transaction.
 //
-// This is implemented by DynamicFeeTx, LegacyTx and AccessListTx.
-type TxData interface {
-	txType() byte // returns the type ID
-	copy() TxData // creates a deep copy and initializes all fields
+// This is implemented by DynamicFeeTx, LegacyTx, AccessListTx,
+// ShutterTx and BatchTx
+type TxInner interface {
+	txType() byte  // returns the type ID
+	copy() TxInner // creates a deep copy and initializes all fields
 
 	chainID() *big.Int
 	accessList() AccessList
@@ -88,7 +89,7 @@ type TxData interface {
 	rawSignatureValues() (v, r, s *big.Int)
 	setSignatureValues(chainID, v, r, s *big.Int)
 
-	TxDataExtension
+	TxInnerExtension
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -177,7 +178,7 @@ func (tx *Transaction) UnmarshalBinary(b []byte) error {
 }
 
 // decodeTyped decodes a typed transaction from the canonical format.
-func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
+func (tx *Transaction) decodeTyped(b []byte) (TxInner, error) {
 	if len(b) == 0 {
 		return nil, errEmptyTypedTx
 	}
@@ -204,7 +205,7 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 }
 
 // setDecoded sets the inner transaction and size after decoding.
-func (tx *Transaction) setDecoded(inner TxData, size int) {
+func (tx *Transaction) setDecoded(inner TxInner, size int) {
 	tx.inner = inner
 	tx.time = time.Now()
 	if size > 0 {

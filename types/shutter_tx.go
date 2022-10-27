@@ -24,7 +24,7 @@ type ShutterTx struct {
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
-func (tx *ShutterTx) copy() TxData {
+func (tx *ShutterTx) copy() TxInner {
 	cpy := &ShutterTx{
 		Nonce: tx.Nonce,
 		Gas:   tx.Gas,
