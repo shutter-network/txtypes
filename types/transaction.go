@@ -248,6 +248,10 @@ func isProtectedV(V *big.Int) bool {
 	return true
 }
 
+func (tx *Transaction) TxInner() TxInner {
+	return tx.inner.copy()
+}
+
 // Protected says whether the transaction is replay-protected.
 func (tx *Transaction) Protected() bool {
 	switch tx := tx.inner.(type) {
