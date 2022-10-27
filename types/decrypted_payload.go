@@ -7,38 +7,31 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-type DecryptedPayload struct {
+type ShutterPayload struct {
 	To    *common.Address `rlp:"nil"`
 	Data  []byte
 	Value *big.Int
 }
 
-func (p *DecryptedPayload) AsMessage(tx *Transaction, signer Signer) (Message, error) {
-	sender, err := signer.Sender(tx)
-	if err != nil {
-		return Message{}, err
+func (p *ShutterPayload) Copy() *ShutterPayload {
+	cpy := new(ShutterPayload)
+	cpy.Data = common.CopyBytes(p.Data)
+	if p.To != nil {
+		addr := common.BytesToAddress(p.To.Bytes())
+		cpy.To = &addr
 	}
-	return NewMessage(
-		sender,        // from
-		p.To,          // to
-		tx.Nonce(),    // nonce
-		p.Value,       // amount
-		tx.Gas(),      // gas limit
-		big.NewInt(0), // gas price
-		big.NewInt(0), // gas fee cap
-		big.NewInt(0), // gas tip cap
-		p.Data,        // data
-		nil,           // access list
-		false,         // is fake
-	), nil
+	if p.Value != nil {
+		cpy.Value = new(big.Int).Set(p.Value)
+	}
+	return cpy
 }
 
-func (p *DecryptedPayload) Encode() ([]byte, error) {
+func (p *ShutterPayload) Encode() ([]byte, error) {
 	return rlp.EncodeToBytes(*p)
 }
 
-func DecodeDecryptedPayload(b []byte) (*DecryptedPayload, error) {
-	p := &DecryptedPayload{}
+func DecodeShutterPayload(b []byte) (*ShutterPayload, error) {
+	p := &ShutterPayload{}
 	err := rlp.DecodeBytes(b, p)
 	return p, err
 }
