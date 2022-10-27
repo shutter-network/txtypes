@@ -17,6 +17,11 @@ type ShutterTx struct {
 	BatchIndex       uint64
 	L1BlockNumber    uint64
 
+	// Optional, only set when decrypted
+	// This is ignored in rlp encoding
+	// and thus hashing
+	Payload *ShutterPayload `rlp:"-"`
+
 	// Signature values
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
@@ -30,10 +35,10 @@ func (tx *ShutterTx) copy() TxInner {
 		Gas:   tx.Gas,
 
 		// These are copied below.
+		EncryptedPayload: []byte{},
 		ChainID:          new(big.Int),
 		GasTipCap:        new(big.Int),
 		GasFeeCap:        new(big.Int),
-		EncryptedPayload: []byte{},
 		BatchIndex:       tx.BatchIndex,
 		L1BlockNumber:    tx.L1BlockNumber,
 		V:                new(big.Int),
@@ -50,8 +55,10 @@ func (tx *ShutterTx) copy() TxInner {
 		cpy.GasFeeCap.Set(tx.GasFeeCap)
 	}
 	if tx.EncryptedPayload != nil {
-		cpy.EncryptedPayload = make([]byte, len(tx.EncryptedPayload))
-		copy(cpy.EncryptedPayload, tx.EncryptedPayload)
+		cpy.EncryptedPayload = common.CopyBytes(tx.EncryptedPayload)
+	}
+	if tx.Payload != nil {
+		cpy.Payload = tx.Payload.Copy()
 	}
 	if tx.V != nil {
 		cpy.V.Set(tx.V)
@@ -66,18 +73,34 @@ func (tx *ShutterTx) copy() TxInner {
 }
 
 // accessors for innerTx.
-func (tx *ShutterTx) txType() byte             { return ShutterTxType }
-func (tx *ShutterTx) chainID() *big.Int        { return tx.ChainID }
-func (tx *ShutterTx) protected() bool          { return true }
-func (tx *ShutterTx) accessList() AccessList   { return nil }
-func (tx *ShutterTx) data() []byte             { return nil }
-func (tx *ShutterTx) gas() uint64              { return tx.Gas }
-func (tx *ShutterTx) gasFeeCap() *big.Int      { return tx.GasFeeCap }
-func (tx *ShutterTx) gasTipCap() *big.Int      { return tx.GasTipCap }
-func (tx *ShutterTx) gasPrice() *big.Int       { return tx.GasFeeCap }
-func (tx *ShutterTx) value() *big.Int          { return nil }
-func (tx *ShutterTx) nonce() uint64            { return tx.Nonce }
-func (tx *ShutterTx) to() *common.Address      { return nil }
+func (tx *ShutterTx) txType() byte           { return ShutterTxType }
+func (tx *ShutterTx) chainID() *big.Int      { return tx.ChainID }
+func (tx *ShutterTx) protected() bool        { return true }
+func (tx *ShutterTx) accessList() AccessList { return nil }
+func (tx *ShutterTx) data() []byte {
+	if tx.Payload != nil {
+		return tx.Payload.Data
+	}
+	return []byte{}
+}
+func (tx *ShutterTx) gas() uint64         { return tx.Gas }
+func (tx *ShutterTx) gasFeeCap() *big.Int { return tx.GasFeeCap }
+func (tx *ShutterTx) gasTipCap() *big.Int { return tx.GasTipCap }
+func (tx *ShutterTx) gasPrice() *big.Int  { return tx.GasFeeCap }
+func (tx *ShutterTx) value() *big.Int {
+	if tx.Payload != nil {
+		return tx.Payload.Value
+	}
+	return big.NewInt(0)
+}
+
+func (tx *ShutterTx) nonce() uint64 { return tx.Nonce }
+func (tx *ShutterTx) to() *common.Address {
+	if tx.Payload == nil {
+		return nil
+	}
+	return tx.Payload.To
+}
 func (tx *ShutterTx) encryptedPayload() []byte { return tx.EncryptedPayload }
 func (tx *ShutterTx) decryptionKey() []byte    { return nil }
 func (tx *ShutterTx) batchIndex() uint64       { return tx.BatchIndex }
