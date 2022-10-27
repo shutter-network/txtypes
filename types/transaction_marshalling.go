@@ -345,6 +345,111 @@ func (t *Transaction) FromTransactionData(dec *TransactionData) error {
 				return err
 			}
 		}
+	case ShutterTxType:
+		var itx ShutterTx
+		inner = &itx
+		if dec.ChainID == nil {
+			return errors.New("missing required field 'chainId' in transaction")
+		}
+		itx.ChainID = (*big.Int)(dec.ChainID)
+		if dec.Nonce == nil {
+			return errors.New("missing required field 'nonce' in transaction")
+		}
+		itx.Nonce = uint64(*dec.Nonce)
+		if dec.MaxPriorityFeePerGas == nil {
+			return errors.New("missing required field 'maxPriorityFeePerGas' for txdata")
+		}
+		itx.GasTipCap = (*big.Int)(dec.MaxPriorityFeePerGas)
+		if dec.MaxFeePerGas == nil {
+			return errors.New("missing required field 'maxFeePerGas' for txdata")
+		}
+		itx.GasFeeCap = (*big.Int)(dec.MaxFeePerGas)
+		if dec.Gas == nil {
+			return errors.New("missing required field 'gas' for txdata")
+		}
+		itx.Gas = uint64(*dec.Gas)
+		if dec.L1BlockNumber == nil {
+			return errors.New("missing required field 'l1BlockNumber' in transaction")
+		}
+		itx.L1BlockNumber = uint64(*dec.L1BlockNumber)
+
+		if dec.EncryptedPayload == nil {
+			return errors.New("missing required field 'encryptedPayload' in transaction")
+		}
+
+		itx.EncryptedPayload = *dec.EncryptedPayload
+
+		if dec.BatchIndex == nil {
+			return errors.New("missing required field 'batchIndex' in transaction")
+		}
+		itx.BatchIndex = uint64(*dec.BatchIndex)
+		if dec.V == nil {
+			return errors.New("missing required field 'v' in transaction")
+		}
+
+		hasTo := bool(dec.To != nil)
+		hasValue := bool(dec.Value != nil)
+		hasInput := bool(dec.Input != nil)
+		if hasTo || hasValue || hasInput {
+			itx.Payload = &ShutterPayload{
+				To: dec.To,
+			}
+			if hasInput {
+				// optional
+				itx.Payload.Data = *dec.Input
+			}
+			if !hasValue {
+				// this is only required when there are other payload values set
+				return errors.New("missing required nested field 'value' in transaction payload")
+			}
+			itx.Payload.Value = dec.Value.ToInt()
+		}
+
+		itx.V = (*big.Int)(dec.V)
+		if dec.R == nil {
+			return errors.New("missing required field 'r' in transaction")
+		}
+		itx.R = (*big.Int)(dec.R)
+		if dec.S == nil {
+			return errors.New("missing required field 's' in transaction")
+		}
+		itx.S = (*big.Int)(dec.S)
+		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if withSignature {
+			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
+				return err
+			}
+		}
+	case BatchTxType:
+		var itx BatchTx
+		inner = &itx
+		if dec.ChainID == nil {
+			return errors.New("missing required field 'chainId' in transaction")
+		}
+		itx.ChainID = (*big.Int)(dec.ChainID)
+
+		if dec.Timestamp == nil {
+			return errors.New("missing required field 'timestamp' in transaction")
+		}
+		itx.Timestamp = (*big.Int)(dec.Timestamp)
+
+		if dec.Transactions == nil {
+			return errors.New("missing required field 'transactions' in transaction")
+		}
+		itx.Transactions = make([][]byte, len(dec.Transactions))
+		for i, txx := range dec.Transactions {
+			itx.Transactions[i] = []byte(txx)
+		}
+
+		if dec.L1BlockNumber == nil {
+			return errors.New("missing required field 'l1BlockNumber' in transaction")
+		}
+		itx.L1BlockNumber = uint64(*dec.L1BlockNumber)
+
+		if dec.BatchIndex == nil {
+			return errors.New("missing required field 'batchIndex' in transaction")
+		}
+		itx.BatchIndex = uint64(*dec.BatchIndex)
 		if dec.V == nil {
 			return errors.New("missing required field 'v' in transaction")
 		}
