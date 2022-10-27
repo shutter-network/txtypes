@@ -154,7 +154,11 @@ func (t *Transaction) TransactionData() (enc *TransactionData) {
 		enc.EncryptedPayload = (*hexutil.Bytes)(&tx.EncryptedPayload)
 		enc.L1BlockNumber = (*hexutil.Uint64)(&tx.L1BlockNumber)
 		enc.BatchIndex = (*hexutil.Uint64)(&tx.BatchIndex)
-		enc.To = t.To()
+		if tx.Payload != nil {
+			enc.To = tx.Payload.To
+			enc.Input = (*hexutil.Bytes)(&tx.Payload.Data)
+			enc.Value = (*hexutil.Big)(tx.Payload.Value)
+		}
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
@@ -170,7 +174,6 @@ func (t *Transaction) TransactionData() (enc *TransactionData) {
 		enc.DecryptionKey = (*hexutil.Bytes)(&tx.DecryptionKey)
 		enc.L1BlockNumber = (*hexutil.Uint64)(&tx.L1BlockNumber)
 		enc.BatchIndex = (*hexutil.Uint64)(&tx.BatchIndex)
-		enc.To = t.To()
 		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
