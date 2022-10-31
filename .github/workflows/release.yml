@@ -1,0 +1,52 @@
+name: Release
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: "Run the build with tmate debugging enabled"
+        required: false
+        default: false
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch' }}
+    outputs:
+      tag: ${{ steps.github-tag-action.outputs.new_tag }}
+      release_type: ${{ steps.github-tag-action.outputs.release_type }}
+      changelog: ${{ steps.github-tag-action.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Bump and tag
+        id: github-tag-action
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # new_tag is only set when there are new semver commits
+          # on the release branch
+          release_branches: main
+          default_bump: false
+          custom_release_rules: "hotfix:patch:Hot Fixes,bug:patch:Bug Fixes,chore:patch:Chores"
+  make-release:
+    environment:
+      name: production
+    needs: tag
+    # only release when there is a new tag
+    if: ${{ needs.tag.outputs.tag != null }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Release
+        uses: actions/create-release@v1.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.tag.outputs.tag }}
+          release_name: Release ${{ needs.tag.outputs.tag }}
+          body: |
+            ${{ needs.tag.outputs.changelog }}
